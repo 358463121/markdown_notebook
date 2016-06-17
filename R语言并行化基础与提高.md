@@ -283,7 +283,7 @@ b
 #调试
 当你在并行环境中工作是，debug是很困难的，你不能使用`browser`/`cat`/`print`等参数来发现你的问题。
 ##`tryCatch`-`list`方法
-使用`stop()`函数这不是一个好方法，因为当你收到一个错误信息时，你会很大概率忘记掉stop()的具体内容，为了想起来你得研究很长的一段时间。把所有的信息都扔掉只抛出错误的信息，只因为一个错误，这是很讨厌的。你因为尝试使用`tryCatch`去捕捉那些错误:
+使用`stop()`函数这不是一个好方法，因为当你收到一个错误信息时，很可能这个错误信息你在很久之前写的，都快忘掉了，但是当你的程序跑了1，2天后，突然弹出这个错误，就只因为这一个错误，你的程序终止了，并把你之前的做的计算全部扔掉了，这是很讨厌的。为此，你可以尝试使用`tryCatch`去捕捉那些错误，从而使得出现错误后程序还能继续执行:
 ```r
 foreach(x=list(1, 2, "a"))  %dopar%  
 {
@@ -330,7 +330,7 @@ starting worker pid=7576 on localhost:11411 at 00:11:21.762
 ```
 
 ##创建一个结点专用文件
-一个或许更为有用的选择是使用一个结点专用的文件，如果你的数据集存在一些问题的时候，可以方便观测：
+一个或许更为有用的选择是创建一个结点专用的文件，如果你的数据集存在一些问题的时候，可以方便观测：
 ```r
 cl<-makeCluster(no_cores, outfile = "debug.txt")
 registerDoParallel(cl)
@@ -342,7 +342,7 @@ stopCluster(cl)
 ```
 
 #`partools`包
-`partools`这个包有一个[dbs()](https://matloff.wordpress.com/2015/01/03/debugging-parallel-code-with-dbs/)函数或许值得一看（如果不是windows），他允许你联合多个终端给每个进程进行debug。
+`partools`这个包有一个[dbs()](https://matloff.wordpress.com/2015/01/03/debugging-parallel-code-with-dbs/)函数或许值得一看（使用非windows系统值得一看），他允许你联合多个终端给每个进程进行debug。
 
 #Caching
 当做一个大型计算时，我强烈推荐使用一些缓存。这或许有多个原因你想要结束计算，但是要遗憾地浪费了计算的宝贵的时间。这里有一个包可以做缓存，[R.cache](http://cran.r-project.org/web/packages/R.cache/index.html)，但是我发现自己写个函数来实现更加简单。你只需要嵌入`digest`包就可以。`digest()`函数是一个散列函数，把一个R对象输入进去可以输出一个md5值或sha1等从而得到一个唯一的key值，当你key匹配到你保存的cache中的key时，你就可以继续你的计算了，而不需要将算法重新运行，以下是一个使用例子：
@@ -370,7 +370,7 @@ cacheParallel <- function(){
   })
 }
 ```
-这个例子很显然在第二次运行的时候并没有启动Sys.sleep，而是在上一次结束的时候继续运行。
+这个例子很显然在第二次运行的时候并没有启动Sys.sleep，而是检测到了你的cache文件，加载了上一次计算后的cache，你就不必再计算Sys.sleep了，因为在上一次已经计算过了。
 
 ```r
 system.time(out <- cacheParallel())
@@ -478,13 +478,13 @@ Error in unserialize(node$con) : error reading from connection
 
  - 尽量使用rm()避免无用的变量
  - 尽量使用gc()释放内存。即使这在R中是自动执行的，但是当它没有及时执行，在一个并行计算的情况下，如果没有及时释放内存，那么它将不会将内存返回给操作系统，从而影响了其他worker的执行。
- - Although it is often better to parallelize at a large scale due to initialization costs it may in memory situations be better to parallelize at a small scale, i.e. in subroutines.
+ - 通常并行化在大规模运算下很有用，但是，考虑到R中的并行化存在内存的初始化成本，所以考虑到内存的情况下，显然小规模的并行化可能会更有用。
  - 有时候在并行计算时，不断做缓存，当达到上限时，换回串行计算。
  - 你也可以手动的控制每个核所使用的内存数量，一个简单的方法就是：memory.limit()/memory.size() = max cores
 
 #其他建议
 
- - 一个常用的核检测函数：
+ - 一个常用的CPU核数检测函数：
 ```r
 max(1, detectCores() - 1)
 ```
